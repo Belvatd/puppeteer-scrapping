@@ -25,8 +25,6 @@ async function scrapeTokopedia() {
   const url = "https://www.tokopedia.com/search?st=product&q=drone";
   await page.goto(url, { waitUntil: "networkidle2" });
 
-  page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
-
   async function autoScroll(page) {
     await page.evaluate(async () => {
       await new Promise((resolve) => {
@@ -35,8 +33,7 @@ async function scrapeTokopedia() {
         const timer = setInterval(() => {
           window.scrollBy(0, distance);
           totalHeight += distance;
-
-          if (totalHeight >= document.body.scrollHeight) {
+          if (totalHeight >= document.body.scrollHeight - 1000) {
             clearInterval(timer);
             resolve();
           }
@@ -54,39 +51,39 @@ async function scrapeTokopedia() {
     );
     if (!container) return items;
 
-    const productCards = container.children;
+    const rows = container.querySelectorAll("div.css-jza1fo");
 
-    Array.from(productCards).forEach((card, index) => {
-      try {
-        const linkElement = card.querySelector("a[href]");
-        if (!linkElement) return;
+    rows.forEach((row) => {
+      const links = row.querySelectorAll("div.css-5wh65g > a");
 
-        // Mulai dari <a> lalu navigasi DIV > DIV nth-child
-        const titleElement = linkElement.querySelector(
-          "div > div:nth-child(2) > div:nth-child(1) > span"
-        );
-        const priceElement = linkElement.querySelector(
-          "div > div:nth-child(2) > div:nth-child(2) > div"
-        );
-        const shopNameElement = linkElement.querySelector(
-          "div > div:nth-child(2) > div:nth-child(4) > div:nth-child(2) > span:nth-child(1)"
-        );
-        const locationElement = linkElement.querySelector(
-          "div > div:nth-child(2) > div:nth-child(4) > div:nth-child(2) > span:nth-child(2)"
-        );
+      links.forEach((linkElement) => {
+        try {
+          const titleElement = linkElement.querySelector(
+            "div > div:nth-child(2) > div:nth-child(1) > span"
+          );
+          const priceElement = linkElement.querySelector(
+            "div > div:nth-child(2) > div:nth-child(2) > div"
+          );
+          const shopNameElement = linkElement.querySelector(
+            "div > div:nth-child(2) > div:nth-child(4) > div:nth-child(2) > span:nth-child(1)"
+          );
+          const locationElement = linkElement.querySelector(
+            "div > div:nth-child(2) > div:nth-child(4) > div:nth-child(2) > span:nth-child(2)"
+          );
 
-        const title = titleElement?.innerText.trim() || "";
-        const price = priceElement?.innerText.trim() || "";
-        const shopName = shopNameElement?.innerText.trim() || "";
-        const location = locationElement?.innerText.trim() || "";
-        const link = linkElement.href || "";
+          const title = titleElement?.innerText.trim() || "";
+          const price = priceElement?.innerText.trim() || "";
+          const shopName = shopNameElement?.innerText.trim() || "";
+          const location = locationElement?.innerText.trim() || "";
+          const link = linkElement.href || "";
 
-        if (title && price && link) {
-          items.push({ title, price, shopName, location, link });
+          if (title && price && link) {
+            items.push({ title, price, shopName, location, link });
+          }
+        } catch (err) {
+          console.log(`Error parsing a product:`, err);
         }
-      } catch (err) {
-        console.log(`Error parsing card #${index}:`, err);
-      }
+      });
     });
 
     return items;
